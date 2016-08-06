@@ -16,10 +16,33 @@ byte[] xor(byte[] message, byte[] key);
 
 ##### 数据类工具
 
-###### 字节数组与整型相互转换
+###### 字节数组与int,long相互转换
 ```Java
-int byteArray2Int(byte[] bytes);
-byte[] int2ByteArray(int i);
+int bytes2Int(byte[] bytes);
+byte[] int2Bytes(int i);
+
+byte[] long2Bytes(long num);
+long bytes2Long(byte[] byteNum);
+
+```
+###### 各进制数相互转换
+```
+String binary2Oct(String source);
+String binary2Dec(String source);
+String binary2Hex(String source)
+
+String oct2Binary(String source);
+String oct2Dec(String source)
+String oct2Hex(String source);
+
+String dec2Binary(int source);
+String dec2Oct(int source);
+String dec2Hex(int source);
+
+String hex2Binary(String source)；
+String hex2Oct(String source);
+String hex2Dec(String source)；
+
 ```
 ##### Gson 
 [查看支持的方法](https://github.com/teclan/teclan-utils/blob/master/src/main/java/teclan/utils/GsonUtils.java)
