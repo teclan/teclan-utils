@@ -100,7 +100,7 @@ public class FileUtils {
                 BufferedReader bufferedReader = new BufferedReader(read);
                 String line = null;
                 while ((line = bufferedReader.readLine()) != null) {
-                    content.append("\n").append(line);
+                    content.append(line);
                 }
                 read.close();
             } else {
