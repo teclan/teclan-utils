@@ -26,16 +26,16 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
 
 public class FileUtils {
-    private static final Logger LOGGER = LoggerFactory
+    private static final Logger LOGGER         = LoggerFactory
             .getLogger(FileUtils.class);
 
-    private static final Config mediaTypes = ConfigFactory
+    private static final Config mediaTypes     = ConfigFactory
             .load("media-types.conf").getConfig("teclan");
 
     private static final Config mediaExtension = ConfigFactory
             .load("file-extensions.conf").getConfig("teclan");
 
-    private static TikaConfig tika;
+    private static TikaConfig   tika;
 
     static {
         try {
@@ -293,7 +293,15 @@ public class FileUtils {
         return false;
     }
 
-    public static String getFileMD5(File file) {
+    /**
+     * 获取文件摘要
+     * 
+     * @param file
+     * @param algorithm
+     *            MD5,SHA-1,SHA-256
+     * @return
+     */
+    public static String getFileSummary(File file, String algorithm) {
         if (!file.isFile()) {
             return null;
         }
@@ -302,7 +310,7 @@ public class FileUtils {
         byte buffer[] = new byte[1024];
         int len;
         try {
-            digest = MessageDigest.getInstance("MD5");
+            digest = MessageDigest.getInstance(algorithm);
             in = new FileInputStream(file);
             while ((len = in.read(buffer, 0, 1024)) != -1) {
                 digest.update(buffer, 0, len);
