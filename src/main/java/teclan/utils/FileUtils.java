@@ -8,10 +8,8 @@ import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.tika.config.TikaConfig;
@@ -322,35 +320,5 @@ public class FileUtils {
         }
         BigInteger bigInt = new BigInteger(1, digest.digest());
         return bigInt.toString(16);
-    }
-
-    /**
-     * 获取文件夹中文件的MD5值
-     * 
-     * @param file
-     * @param listChild
-     *            ：true 递归子目录中的文件
-     * @return
-     */
-    public static Map<String, String> getDirMD5(File file, boolean listChild) {
-        if (!file.isDirectory()) {
-            return null;
-        }
-        // <filepath,md5>
-        Map<String, String> map = new HashMap<String, String>();
-        String md5;
-        File files[] = file.listFiles();
-        for (int i = 0; i < files.length; i++) {
-            File f = files[i];
-            if (f.isDirectory() && listChild) {
-                map.putAll(getDirMD5(f, listChild));
-            } else {
-                md5 = getFileMD5(f);
-                if (md5 != null) {
-                    map.put(f.getPath(), md5);
-                }
-            }
-        }
-        return map;
     }
 }
