@@ -31,7 +31,7 @@ public class Strings {
      * @param str
      *            待摘要字符串
      * @param algorithm
-     *            摘要算法，支持MD5、SHA1
+     *            摘要算法， MD5,SHA-1,SHA-256
      *
      * @return 摘要
      */
