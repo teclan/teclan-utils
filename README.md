@@ -105,3 +105,8 @@ String getMediaTypeWithExtension(File file);
 ```Java
 boolean isSpecialType(File file, String type);
 ```
+##### 获取文件摘要 (MD5,SHA-1,SHA-256)
+```Java
+public static String getFileSummary(File file, String algorithm);
+```
+
