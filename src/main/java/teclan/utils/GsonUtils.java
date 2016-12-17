@@ -12,6 +12,7 @@ import java.util.Map.Entry;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -20,6 +21,8 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.reflect.TypeToken;
+
+import teclan.utils.db.ActiveRecord;
 
 public class GsonUtils {
     public static final Gson GSON = new GsonBuilder()
@@ -74,6 +77,21 @@ public class GsonUtils {
         JsonObject json = new JsonObject();
         json.add(root, GSON.toJsonTree(src));
         return json.toString();
+    }
+
+    public static String toJsonForJdbcRecord(Object src) {
+        JsonArray array = new JsonArray();
+
+        if (src instanceof List<?>) {
+            for (int i = 0; i < ((List<?>) src).size(); i++) {
+                array.add(((ActiveRecord) ((List<?>) src).get(i)).toJson());
+            }
+
+        } else {
+            array.add((((ActiveRecord) src).toJson()));
+        }
+
+        return GSON.toJson(array).replace("\\", "");
     }
 
     public static Map<String, Object> toMap(String json) {
