@@ -266,7 +266,7 @@ public class FileUtils {
         return out.toString();
     }
 
-    private static void creatIfNeed(String fileName) {
+    public static void creatIfNeed(String fileName) {
         try {
             File parentFile = new File(fileName).getParentFile();
             if (parentFile != null) {
