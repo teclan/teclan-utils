@@ -7,14 +7,25 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.io.TikaInputStream;
@@ -22,24 +33,31 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
 import org.apache.tools.zip.ZipEntry;
 import org.apache.tools.zip.ZipOutputStream;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.SAXReader;
+import org.dom4j.io.XMLWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
 
 public class FileUtils {
-    private static final Logger LOGGER         = LoggerFactory
+    private static final Logger LOGGER = LoggerFactory
             .getLogger(FileUtils.class);
 
-    private static final Config mediaTypes     = ConfigFactory
+    private static final Config mediaTypes = ConfigFactory
             .load("media-types.conf").getConfig("teclan");
 
     private static final Config mediaExtension = ConfigFactory
             .load("file-extensions.conf").getConfig("teclan");
 
-    private static TikaConfig   tika;
+    private static TikaConfig tika;
 
     static {
         try {
@@ -68,26 +86,55 @@ public class FileUtils {
         int p = (bis.read() << 8) + bis.read();
         String code = null;
         switch (p) {
-            case 0xefbb:
-                code = "UTF-8";
-                break;
-            case 0xfffe:
-                code = "Unicode";
-                break;
-            case 0xfeff:
-                code = "UTF-16BE";
-                break;
-            default:
-                code = "GBK";
+        case 0xefbb:
+            code = "UTF-8";
+            break;
+        case 0xfffe:
+            code = "Unicode";
+            break;
+        case 0xfeff:
+            code = "UTF-16BE";
+            break;
+        default:
+            code = "GBK";
         }
         return code;
     }
 
     /**
-     * @author Teclan
-     * 
-     *         读取文本文件内容
+     * @author Teclan 读取文件内容
      * @param file
+     *            文件对象
+     * @return 二进制
+     */
+    public static byte[] getContentByBytes(File file) {
+        try {
+            return Files.readAllBytes(Paths.get(file.getAbsolutePath()));
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage(), e);
+        }
+        return null;
+    }
+
+    /**
+     * @author Teclan 读取文件内容
+     * @param path
+     *            文件路径
+     * @return 二进制
+     */
+    public static byte[] getContentByBytes(String path) {
+        try {
+            return Files.readAllBytes(Paths.get(path));
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage(), e);
+        }
+        return null;
+    }
+
+    /**
+     * @author Teclan 读取文本文件内容
+     * @param file
+     *            文件对象
      * @return 文本内容(字符串形式)
      */
     public static String getContent(File file) {
@@ -122,8 +169,117 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         删除文件，如果是目录，则删除整个目录
+     * @author Teclan 向文件追加内容，如果文件不存在，创建文件
+     * @param fileName
+     *            文件路径
+     * @param content
+     *            文件内容
+     * 
+     */
+    public static void randomWrite2File(String fileName, String content) {
+        RandomAccessFile randomFile = null;
+        try {
+            creatIfNeed(fileName);
+            randomFile = new RandomAccessFile(fileName, "rw");
+            long fileLength = randomFile.length();
+            randomFile.seek(fileLength);
+            randomFile.writeBytes(content);
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage(), e);
+        } finally {
+            try {
+                if (randomFile != null) {
+                    randomFile.close();
+                }
+            } catch (IOException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * @author Teclan 向文件追加内容，如果文件不存在，创建文件
+     * @param fileName
+     *            文件路径
+     * @param content
+     *            文件内容
+     */
+    public static void randomWrite2File(String fileName, byte[] content) {
+        RandomAccessFile randomFile = null;
+        try {
+            creatIfNeed(fileName);
+            randomFile = new RandomAccessFile(fileName, "rw");
+            long fileLength = randomFile.length();
+            randomFile.seek(fileLength);
+            randomFile.write(content, 0, content.length);
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage(), e);
+        } finally {
+            try {
+                if (randomFile != null) {
+                    randomFile.close();
+                }
+            } catch (IOException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * @author Teclan 向文件追加内容，如果文件不存在，创建文件
+     * @param fileName
+     *            文件路径
+     * @param content
+     *            文件内容
+     */
+    public static void write2File(String fileName, String content) {
+        FileWriter writer = null;
+        try {
+            creatIfNeed(fileName);
+            writer = new FileWriter(fileName, true);
+            writer.write(content);
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage(), e);
+        } finally {
+            try {
+                if (writer != null) {
+                    writer.close();
+                }
+            } catch (IOException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+
+        }
+    }
+
+    public static String formatXml(String str)
+            throws DocumentException, IOException {
+        SAXReader reader = new SAXReader();
+        StringReader in = new StringReader(str);
+        Document doc = reader.read(in);
+        OutputFormat formater = OutputFormat.createPrettyPrint();
+        formater.setEncoding("UTF-8");
+        StringWriter out = new StringWriter();
+        XMLWriter writer = new XMLWriter(out, formater);
+        writer.write(doc);
+        writer.close();
+        return out.toString();
+    }
+
+    private static void creatIfNeed(String fileName) {
+        try {
+            File parentFile = new File(fileName).getParentFile();
+            if (parentFile != null) {
+                parentFile.mkdirs();
+            }
+            new File(fileName).createNewFile();
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * @author Teclan 删除文件，如果是目录，则删除整个目录
      * @param file
      */
     public static void deleteFiles(File file) {
@@ -140,8 +296,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         删除文件，如果是目录，则删除整个目录
+     * @author Teclan 删除文件，如果是目录，则删除整个目录
      * @param filePath
      */
     public static void deleteFiles(String filePath) {
@@ -150,8 +305,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         获取文件后缀
+     * @author Teclan 获取文件后缀
      * @param file
      */
     public static String getExtension(File file) {
@@ -166,8 +320,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         获取本工具支持检测的文件类型
+     * @author Teclan 获取本工具支持检测的文件类型
      * @param file
      */
     public static ArrayList<String> getSupportMediaType() {
@@ -179,8 +332,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         获取本工具支持检测的文件后缀
+     * @author Teclan 获取本工具支持检测的文件后缀
      * @param file
      */
     public static ArrayList<String> getSupportExtension() {
@@ -193,8 +345,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         获取指定类型文件匹配的类型
+     * @author Teclan 获取指定类型文件匹配的类型
      * @param file
      */
     public static ArrayList<String> getMediaTypeMatch(String type) {
@@ -208,8 +359,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         获取指定后缀匹配的文件类型，如word，
+     * @author Teclan 获取指定后缀匹配的文件类型，如word，
      * @param file
      */
     public static ArrayList<String> getExtensionMatch(String extension) {
@@ -226,8 +376,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         获取指定文件的真实文件类型
+     * @author Teclan 获取指定文件的真实文件类型
      * @param file
      */
     @SuppressWarnings("deprecation")
@@ -254,8 +403,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         通过文件后缀名获取指定文件的文件类型
+     * @author Teclan 通过文件后缀名获取指定文件的文件类型
      * @param file
      */
     public static String getMediaTypeWithExtension(File file) {
@@ -272,8 +420,7 @@ public class FileUtils {
     }
 
     /**
-     * @author Teclan
-     *         判断指定文件是否是给定的文件类型
+     * @author Teclan 判断指定文件是否是给定的文件类型
      * @param file
      * @param type
      */
@@ -407,4 +554,5 @@ public class FileUtils {
             }
         }
     }
+
 }
