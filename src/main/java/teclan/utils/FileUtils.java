@@ -3,11 +3,11 @@ package teclan.utils;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -19,13 +19,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.io.TikaInputStream;
@@ -40,22 +37,30 @@ import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
 
+import teclan.utils.exec.CommandExecutor;
+
 public class FileUtils {
     private static final Logger LOGGER = LoggerFactory
             .getLogger(FileUtils.class);
+
+    private static final int DEFAULT_READ_LENGTH = 100 * 1024 * 1024;
 
     private static final Config mediaTypes = ConfigFactory
             .load("media-types.conf").getConfig("teclan");
 
     private static final Config mediaExtension = ConfigFactory
             .load("file-extensions.conf").getConfig("teclan");
+
+    private static boolean isWindows = false;
+
+    static {
+        isWindows = System.getProperty("os.name").contains("Windows");
+    }
 
     private static TikaConfig tika;
 
@@ -553,6 +558,93 @@ public class FileUtils {
                 }
             }
         }
+    }
+
+    public static boolean isFileReady(String path) {
+
+        File file = new File(path);
+
+        if (!file.exists()) {
+            LOGGER.warn("File doesn't exist ! :{}", path);
+            return false;
+        }
+
+        if (isWindows) {
+
+            long length = file.length();
+            long lastModified = file.lastModified();
+
+            RandomAccessFile raf = null;
+            try {
+                raf = new RandomAccessFile(file, "rw");
+                if ((file.length() == length)
+                        && (file.lastModified() == lastModified)) {
+                    return true;
+                }
+
+            } catch (FileNotFoundException e) {
+                LOGGER.debug(e.getMessage());
+                return false;
+            } finally {
+                if (raf != null) {
+                    try {
+                        raf.close();
+                    } catch (IOException e) {
+                        LOGGER.debug(e.getMessage());
+                    }
+                }
+            }
+            return false;
+
+        } else {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            String[] cmd = new String[] { "fuser", "-v", path };
+            CommandExecutor exec = new CommandExecutor(Arrays.asList(cmd));
+            exec.run(outputStream);
+            String result = outputStream.toString();
+            return "".equals(result.trim());
+        }
+    }
+
+    public static boolean copyFile(File src, File des) throws Exception {
+        if (src.exists()) {
+            try {
+                new File(des.getParent()).mkdirs();
+
+                FileInputStream fis = new FileInputStream(src);
+                FileOutputStream fos = new FileOutputStream(des);
+
+                int read = 0;
+                int hasRead = 0;
+
+                byte[] content = new byte[(int) (src.length()
+                        - hasRead > DEFAULT_READ_LENGTH ? DEFAULT_READ_LENGTH
+                                : (src.length() - hasRead))];
+
+                while ((read = fis.read(content)) != -1) {
+                    fos.write(content);
+                    fos.flush();
+                    hasRead += read;
+
+                    if (hasRead == src.length()) {
+                        break;
+                    }
+                    content = new byte[(int) (src.length()
+                            - hasRead > DEFAULT_READ_LENGTH
+                                    ? DEFAULT_READ_LENGTH
+                                    : (src.length() - hasRead))];
+                }
+                fos.close();
+                fis.close();
+                return true;
+            } catch (Exception e) {
+                LOGGER.error(e.getMessage(), e);
+                throw e;
+            }
+        } else {
+            LOGGER.warn("File is not exists ! {}", src.getAbsolutePath());
+        }
+        return false;
     }
 
 }
